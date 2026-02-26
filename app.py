@@ -20,8 +20,12 @@ def convert():
     
     file = request.files['video']
     unique_id = str(uuid.uuid4())
-    input_path = os.path.join(UPLOAD_FOLDER, f"{unique_id}_in.mp4")
-    output_path = os.path.join(UPLOAD_FOLDER, f"{unique_id}_out.mp4")
+    
+    # ვიღებთ ორიგინალ გაფართოებას (მაგ: mov, mp4, avi)
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'mp4'
+    
+    input_path = os.path.join(UPLOAD_FOLDER, f"{unique_id}_in.{ext}")
+    output_path = os.path.join(UPLOAD_FOLDER, f"{unique_id}_out.mp4") # გამოსვლა უეჭველი mp4 რჩება
     
     file.save(input_path)
 

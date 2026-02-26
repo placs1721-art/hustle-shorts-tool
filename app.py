@@ -7,6 +7,8 @@ import uuid
 app = Flask(__name__)
 CORS(app)
 
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024 
+
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -23,18 +25,19 @@ def convert():
     file.save(input_path)
 
     try:
-        # preset='ultrafast' აჩქარებს პროცესს 5-ჯერ, რომ სერვერი არ გაითიშოს
+        # იყენებს fast-scale-ს და ultrafast preset-ს [cite: 2026-02-26]
         (
             ffmpeg
             .input(input_path, t=60)
             .filter('crop', 'ih*9/16', 'ih')
-            .filter('scale', 720, 1280) # 720p უფრო სტაბილურია უფასო სერვერისთვის
+            .filter('scale', 480, 854) # 480p უფრო მსუბუქია სერვერისთვის [cite: 2026-02-26]
             .output(
                 output_path, 
                 vcodec='libx264', 
-                crf=23, 
+                crf=32, 
                 preset='ultrafast', 
-                movflags='faststart', 
+                tune='fastdecode',
+                movflags='faststart',
                 pix_fmt='yuv420p'
             )
             .run(overwrite_output=True)

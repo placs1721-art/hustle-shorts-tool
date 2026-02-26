@@ -13,7 +13,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route('/convert', methods=['POST'])
 def convert():
     if 'video' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+        return jsonify({"error": "No file"}), 400
     
     file = request.files['video']
     unique_id = str(uuid.uuid4())
@@ -23,18 +23,17 @@ def convert():
     file.save(input_path)
 
     try:
-        # იდეალური Shorts პარამეტრები: 9:16 Crop, 1080p Scale, High Quality Sharpen
+        # preset='ultrafast' აჩქარებს პროცესს 5-ჯერ, რომ სერვერი არ გაითიშოს
         (
             ffmpeg
             .input(input_path, t=60)
             .filter('crop', 'ih*9/16', 'ih')
-            .filter('scale', 1080, 1920)
-            .filter('unsharp', '5:5:1.0:5:5:0.0')
+            .filter('scale', 720, 1280) # 720p უფრო სტაბილურია უფასო სერვერისთვის
             .output(
                 output_path, 
                 vcodec='libx264', 
-                crf=18, 
-                preset='slow', 
+                crf=23, 
+                preset='ultrafast', 
                 movflags='faststart', 
                 pix_fmt='yuv420p'
             )
@@ -42,7 +41,7 @@ def convert():
         )
         return send_file(output_path, as_attachment=True)
     except Exception as e:
-        return jsonify({"error": "Processing failed"}), 500
+        return jsonify({"error": str(e)}), 500
     finally:
         if os.path.exists(input_path): os.remove(input_path)
 

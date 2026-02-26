@@ -7,10 +7,15 @@ import uuid
 app = Flask(__name__)
 CORS(app)
 
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 # 100MB-მდე გავზარდოთ
+# მაქსიმალური ზომა 100MB, რომ 1080p ვიდეოებმა თავისუფლად გაიაროს
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@app.route('/')
+def home():
+    return "HustleBotics API is Running! 🚀 Ready for 10M views."
 
 @app.route('/convert', methods=['POST'])
 def convert():
@@ -25,7 +30,7 @@ def convert():
     file.save(input_path)
 
     try:
-        # 1080p Shorts ფორმატი [cite: 2026-02-26]
+        # Full HD 1080x1920 კონვერტაცია ხმით
         (
             ffmpeg
             .input(input_path, t=60)
@@ -34,19 +39,26 @@ def convert():
             .output(
                 output_path, 
                 vcodec='libx264', 
-                crf=20, # მაღალი ხარისხი [cite: 2026-02-26]
-                preset='ultrafast', # სისწრაფისთვის უფასო სერვერზე [cite: 2026-02-26]
+                acodec='aac',      # აბრუნებს ხმას
+                strict='experimental',
+                crf=20,            # მაღალი ვიზუალური ხარისხი
+                preset='ultrafast', # სისწრაფე Render-ის უფასო CPU-სთვის
                 movflags='faststart',
                 pix_fmt='yuv420p',
-                threads=0 # იყენებს ყველა ხელმისაწვდომ ბირთვს [cite: 2026-02-26]
+                threads=0          # იყენებს სერვერის მაქსიმალურ რესურსს
             )
             .run(overwrite_output=True)
         )
         return send_file(output_path, as_attachment=True)
     except Exception as e:
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
+        # ფაილების წაშლა ადგილი რომ არ გაივსოს
         if os.path.exists(input_path): os.remove(input_path)
+        # შენიშვნა: გამომავალ ფაილს Flask აგზავნის და მერე შეგიძლია წაშალო, 
+        # მაგრამ Render-ის დისკი ავტომატურად იწმინდება გადატვირთვისას.
 
 if __name__ == '__main__':
+    # პორტის დინამიური აღება Render-ისთვის
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))

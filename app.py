@@ -7,7 +7,7 @@ import uuid
 app = Flask(__name__)
 CORS(app)
 
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024 
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 # 100MB-მდე გავზარდოთ
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -15,7 +15,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route('/convert', methods=['POST'])
 def convert():
     if 'video' not in request.files:
-        return jsonify({"error": "No file"}), 400
+        return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['video']
     unique_id = str(uuid.uuid4())
@@ -25,20 +25,20 @@ def convert():
     file.save(input_path)
 
     try:
-        # იყენებს fast-scale-ს და ultrafast preset-ს [cite: 2026-02-26]
+        # 1080p Shorts ფორმატი [cite: 2026-02-26]
         (
             ffmpeg
             .input(input_path, t=60)
             .filter('crop', 'ih*9/16', 'ih')
-            .filter('scale', 480, 854) # 480p უფრო მსუბუქია სერვერისთვის [cite: 2026-02-26]
+            .filter('scale', 1080, 1920) 
             .output(
                 output_path, 
                 vcodec='libx264', 
-                crf=32, 
-                preset='ultrafast', 
-                tune='fastdecode',
+                crf=20, # მაღალი ხარისხი [cite: 2026-02-26]
+                preset='ultrafast', # სისწრაფისთვის უფასო სერვერზე [cite: 2026-02-26]
                 movflags='faststart',
-                pix_fmt='yuv420p'
+                pix_fmt='yuv420p',
+                threads=0 # იყენებს ყველა ხელმისაწვდომ ბირთვს [cite: 2026-02-26]
             )
             .run(overwrite_output=True)
         )
